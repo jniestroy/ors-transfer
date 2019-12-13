@@ -1,0 +1,99 @@
+openapi: 3.0.1
+info:
+  title: Transfer Service API
+  description: Defintions of Transfer Service End-points
+  version: '0.1'
+servers:
+  - url: 'http://data.uvadcos.io'
+paths:
+  /:
+    get:
+      description: Download Homepage
+      responses:
+        '200':
+          description: HTML Download Page
+      servers:
+        - url: 'http://data.uvadcos.io'
+    servers:
+      - url: 'http://data.uvadcos.io'
+  /upload-files:
+    get:
+      description: Download Homepage HTML Version
+      responses:
+        '200':
+          description: HTML Download Page
+      servers:
+        - url: 'http://data.uvadcos.io'
+    servers:
+      - url: 'http://data.uvadcos.io'
+    post:
+      description: File Upload End-point
+      responses:
+        '200':
+          description: File uploaded successfully and minted new id
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                metadata:
+                  type: string
+
+
+  /download-files:
+    post:
+      description: Download File of given Identifier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Download Identifier:
+                  type: string
+            examples:
+              '0':
+                value: |
+                  {
+                      "Download Identifier":"ark:99999/6521e5fd-5ce7-4681-b35e-dd575c7c293a"
+                  }
+      responses:
+        '200':
+          description: File downloaded
+        '400':
+          description: "Improperly formatted ID/ID not registered"
+      servers:
+        - url: 'http://data.uvadcos.io'
+    servers:
+      - url: 'http://data.uvadcos.io'
+  /run-job:
+    post:
+      description: Run Job using spark using dataset and software ID's
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Dataset Identifier:
+                  type: string
+                Job Identifier:
+                  type: string
+            examples:
+              '0':
+                value: |
+                  {
+                      "Job Identifier":"ark:99999/54c75a4e-850b-47a0-a638-19e647f2a1eb",
+                      "Dataset Identifier":"ark:99999/6521e5fd-5ce7-4681-b35e-dd575c7c293a"
+                  }
+      responses:
+        '200':
+          description: Job Run Successfully
+      servers:
+        - url: 'http://data.uvadcos.io'
+    servers:
+      - url: 'http://data.uvadcos.io'
