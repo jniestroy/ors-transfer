@@ -14,6 +14,15 @@ import flask
 
 app = Flask(__name__)
 
+root_dir = ''
+
+root_dir = '/Users/justinniestroy-admin/Documents'
+
+secret_key = os.environ['MINIO_SECRET_KEY']
+
+access_key = os.environ['MINIO_ACCESS_KEY']
+
+
 @app.route('/')
 def homepage():
     return render_template('upload_boot.html')
@@ -134,7 +143,7 @@ def download_file(download_id):
     except:
 
         return jsonify({"error":"Improperly formatted Identifier"}),400
-    print(metareturned)
+
     if 'error' in metareturned.keys():
 
         return(jsonify({'error':"Identifier does not exist"})),400
@@ -147,8 +156,8 @@ def download_file(download_id):
 
 
     filename = py_location.split('/')[-1]
-    result = send_file(filename)
-    os.remove('/app/' + filename)
+    result = send_file(root_dir + '/app/' + filename)
+    os.remove(root_dir + '/app/' + filename)
 
     return result
 
@@ -209,6 +218,7 @@ def upload_files():
 
         success = result['upload']
 
+        print(success)
         if success:
 
             obj_hash = get_obj_hash(file_name,folder)
@@ -313,11 +323,43 @@ def upload_files():
 
     return jsonify({'error':'Files failed to upload.'}),400
 
+@app.route('/delte-file/<everything:ark>',methods = ['DELETE'])
+def delete_files(ark):
+
+    if valid_ark(ark):
+
+        if regestiredID(ark):
+
+            meta = getObjectMetadata(ark)
+
+        else:
+
+            return jsonify({"error":"Given Identifier not regesited"}),400
+
+    else:
+        return jsonify({"error":"Improperly formatted Identifier"}),400
+
+    minioLocation = meta['distribution'][0]['contentUrl']
+
+    bucket = minioLocation.split('/')[1]
+
+    location = '/'.join(minioLocation.split('/')[2:])
+
+    full = '/'.join(minioLocation.split('/')[1:])
+
+    success, error = remove_file(bucket,location)
+
+def remove_file(bucket,location):
+    minioClient = Minio('minionas.uvadcos.io',
+                    access_key=access_key,
+                    secret_key=secret_key,
+                    secure=False)
+
 def bucket_exists(bucketName):
 
     minioClient = Minio('minionas.uvadcos.io',
-                    access_key='breakfast',
-                    secret_key='breakfast',
+                    access_key=access_key,
+                    secret_key=secret_key,
                     secure=False)
 
     try:
@@ -332,8 +374,8 @@ def bucket_exists(bucketName):
 
 def make_bucket(bucketName):
     minioClient = Minio('minionas.uvadcos.io',
-                    access_key='breakfast',
-                    secret_key='breakfast',
+                    access_key=access_key,
+                    secret_key=secret_key,
                     secure=False)
     try:
         minioClient.make_bucket(bucketName)
@@ -414,8 +456,8 @@ def getUserInputs(requestFiles,requestForm):
 
 def delete_bucket(bucketName):
     minioClient = Minio('minionas.uvadcos.io',
-                    access_key='breakfast',
-                    secret_key='breakfast',
+                    access_key=access_key,
+                    secret_key=secret_key,
                     secure=False)
     if bucketName == 'prevent' or bucketName == 'breakfast' or bucketName == 'puglia':
         return "Can't delete that bucket"
@@ -519,14 +561,14 @@ def mintIdentifier(meta,start_time,end_time,file_name,location,obj_hash,file_dat
 def download_script(bucket,location):
 
     minioClient = Minio('minionas.uvadcos.io',
-                    access_key='breakfast',
-                    secret_key='breakfast',
+                    access_key=access_key,
+                    secret_key=secret_key,
                     secure=False)
 
     data = minioClient.get_object(bucket, location)
     file_name = location.split('/')[-1]
 
-    with open('/app/' + file_name, 'wb') as file_data:
+    with open(root_dir + '/app/' + file_name, 'wb') as file_data:
             for d in data.stream(32*1024):
                 file_data.write(d)
 
@@ -546,12 +588,13 @@ def upload(f,name,folder = ''):
     f.seek(0)
     if size == 0:
         return {'upload':False,'error':"Empty File"}
-    try:
-        minioClient.put_object('breakfast', folder +name, f,size)
+    # try:
 
-    except ResponseError as err:
+    minioClient.put_object('breakfast', folder + name, f, size)
 
-        return {'upload':False}
+    # except ResponseError as err:
+    #
+    #     return {'upload':False}
 
     #f.save(secure_filename(f.filename))
     return {'upload':True,'location':'breakfast/' + folder + name}
@@ -559,8 +602,8 @@ def upload(f,name,folder = ''):
 def get_obj_hash(name,folder = ''):
 
     minioClient = Minio('minionas.uvadcos.io',
-                    access_key='breakfast',
-                    secret_key='breakfast',
+                    access_key=access_key,
+                    secret_key=secret_key,
                     secure=False)
 
     result = minioClient.stat_object('breakfast', folder + name)
@@ -626,20 +669,20 @@ def stardog_eg_csv(ark):
         conn.begin()
     #results = conn.select('select * { ?a ?p ?o }')
         results = conn.paths("PATHS START ?x=<"+ ark + "> END ?y VIA ?p",content_type='text/csv')
-    with open('/star/test.csv','wb') as f:
+    with open(root_dir + '/star/test.csv','wb') as f:
         f.write(results)
 
     return
 
 def make_eg(ark):
     stardog_eg_csv(ark)
-    data = pd.read_csv('/star/test.csv')
+    data = pd.read_csv(root_dir + '/star/test.csv')
     eg = build_evidence_graph(data)
     clean_up()
     return eg
 
 def create_named_graph(meta,id):
-    with open('/star/meta.json','w') as f:
+    with open(root_dir + '/star/meta.json','w') as f:
         json.dump(meta, f)
     conn_details = {
         'endpoint': 'http://stardog.uvadcos.io',
@@ -648,7 +691,7 @@ def create_named_graph(meta,id):
     }
     with stardog.Connection('db', **conn_details) as conn:
         conn.begin()
-        conn.add(stardog.content.File("/star/meta.json"),graph_uri='http://ors.uvadcos/'+id)
+        conn.add(stardog.content.File(root_dir + "/star/meta.json"),graph_uri='http://ors.uvadcos/'+id)
         conn.commit()
     # cmd = 'stardog data add --named-graph http://ors.uvadcos.io/' + id + ' -f JSONLD test "/star/meta.json"'
     # test = os.system(cmd)
@@ -656,7 +699,7 @@ def create_named_graph(meta,id):
     return
 
 def clean_up():
-    os.system('rm /star/*')
+    os.system('rm ' + root_dir + '/star/*')
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0',debug = True)
