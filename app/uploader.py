@@ -369,7 +369,7 @@ def remove_file(bucket,location):
 
     except:
 
-        return False,'Object does not exist'
+        return False,'Object does not exist, perhaps already deleted.'
 
     return True, ''
 
